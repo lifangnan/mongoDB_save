@@ -5,6 +5,8 @@
 
 # from pvaccess import *
 import pymongo
+from io import BytesIO
+import base64
 from PIL import Image
 import numpy as np
 import pandas as pd
@@ -131,18 +133,19 @@ def insert_one_event_collection(_db, _title="unnamed", _Triger=None, _list_PV_na
 
     event_collection = _db['event']
     event_collection.insert_one(event_document)
-    
 
 
 # 方法2：读取Andor相机拍到的图片
-def read_Andor_and_insert_file():
+def read_Andor_and_insert_file(_db, _index_shot = None):
+    json_Data_list = None
+
     is_OK = Chan_NumImagesCounter_RBV.getw()
     time.sleep(0.1)
     print(is_OK)
     Chan_ArrayCounter = CaChannel('13ANDOR1:cam1:ArrayCounter_RBV')
     Chan_ArrayCounter.searchw()
-    i = Chan_ArrayCounter.getw()
-    
+    _index_shot = Chan_ArrayCounter.getw()
+
     # 像素x和y
     # size_x
     Chan_cam1_SizeX = CaChannel('13ANDOR1:cam1:SizeX')
@@ -161,33 +164,53 @@ def read_Andor_and_insert_file():
     # Chan_cam1_time.searchw()
     #Andorvisionfiletime = Chan_cam1_time.getw()
 
-
     # 相机数据传输模块
     # Andorvision相机数据传输
     # data
-    Chan_image1_ArrayData = CaChannel('13ANDOR1:image1:ArrayData')
-    Chan_image1_ArrayData.searchw()
-    pic_arraydata = Chan_image1_ArrayData.getw(use_numpy=True)
-    #保存图片
-    pic_arraydata = np.array(pic_arraydata, dtype=np.uint8)
-    pic_arraydata = pic_arraydata.reshape(Andorvisionpixelx, Andorvisionpixely)
-    image_Andor = Image.fromarray(pic_arraydata, 'L') #可传输灰度图和彩色图
-    image_Andor.save(str(i) + ".tiff")
 
+    try:  # 如果相机未正常工作
+        Chan_image1_ArrayData = CaChannel('13ANDOR1:image1:ArrayData')
+        Chan_image1_ArrayData.searchw()
+        pic_arraydata = Chan_image1_ArrayData.getw(use_numpy=True)
+        # 保存图片
+        pic_arraydata = np.array(pic_arraydata, dtype=np.uint8)
+        pic_arraydata = pic_arraydata.reshape(
+            Andorvisionpixelx, Andorvisionpixely)
+        image_Andor = Image.fromarray(pic_arraydata)  # 可传输灰度图和彩色图
+        image_Andor = image_Andor.convert('L')
+        # 将Image对象存在内存BytesIO中
+        pic_in_memory = BytesIO()
+        image_Andor.save(pic_in_memory, format='TIFF')
 
+        file_name = str(_index_shot) + '_ANDOR1.tiff'
+        image_Andor_document = {'File_name': file_name, 'Data': base64.encodebytes(
+            pic_in_memory.getvalue()), 'pixel_x': Andorvisionpixelx, 'pixel_y': Andorvisionpixely}
+
+        # 将文件上传到MongoDB中，数据使用base64的字节编码
+        file_collection = _db['event']
+        insert_result = file_collection.insert_one(image_Andor_document)
+        file_id = str(insert_result.inserted_id)
+
+        json_Data_list = {file_id: {'File_name': file_name, 'Source': 'ANDOR1',
+                                    'File_type': 'TIFF', 'Timestamp': datetime.datetime.now()}}
+        # image_Andor.save(str(i) + ".tiff")
+    except:
+        pass
+
+    return json_Data_list
 
 
 # 方法2：向mongoDB插入一个新的配置表document，假设传入的参数全部为string类型
-def write_Configuration_document(_db, _Triger_sources_list, _pv_list, _UI_port, _Archiver_port):
-    configuration_document = {
-        "modified_time": datetime.datetime.now(),
-        "triger_sources": eval(_Triger_sources_list),
-        "pv_list": eval(_pv_list),
-        "ui_port": int(_UI_port),
-        "archiver_port": int(_Archiver_port)
-    }
-    configuration_collection = _db['configurations']
-    configuration_collection.insert_one(configuration_document)
+# def write_Configuration_document(_db, _Triger_sources_list, _pv_list, _UI_port, _Archiver_port):
+#     configuration_document = {
+#         "modified_time": datetime.datetime.now(),
+#         "triger_sources": eval(_Triger_sources_list),
+#         "pv_list": eval(_pv_list),
+#         "ui_port": int(_UI_port),
+#         "archiver_port": int(_Archiver_port)
+#     }
+#     configuration_collection = _db['configurations']
+#     configuration_collection.insert_one(configuration_document)
 
 
 # 连接数据库
@@ -200,7 +223,6 @@ Chan_NumImagesCounter_RBV = CaChannel('13ANDOR1:cam1:NumImagesCounter_RBV')
 Chan_NumImagesCounter_RBV.searchw()
 
 
-
 while True:
     is_OK = Chan_NumImagesCounter_RBV.getw()
     while is_OK == 0:
@@ -209,16 +231,11 @@ while True:
 
         # 状态位变为1，说明ANDOR相机拍照完成
         if is_OK == 1:
-            read_Andor_and_insert_file()
+            Chan_ArrayCounter = CaChannel('13ANDOR1:cam1:ArrayCounter_RBV')
+            Chan_ArrayCounter.searchw()
+            index_shot = Chan_ArrayCounter.getw() # i 代表发次
 
-            # # 保存备份txt文件
-            # np.savetxt(str(i) + ".txt", data1, fmt='%d')
-            # print(data1)
-            # #a = np.loadtxt('str(i).txt')
-
-            # # 在数据库中插入大文件
-            # mydb.insert_one({'filename': str(i) + ".txt", 'pixelx': Andorvisionpixelx,
-            #                 'pixely': Andorvisionpixely, 'data': Binary(pickle.dumps(data1, protocol=-1), subtype=128)})
+            json_Data_list = read_Andor_and_insert_file(mydb, index_shot)
 
             insert_one_event_collection(
-                mydb, "No." + str(i), None, list_PV_name, None)
+                mydb, _title = "No." + str(index_shot), _Triger=None, _list_PV_name = list_PV_name, _json_Data_list = json_Data_list)
