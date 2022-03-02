@@ -213,17 +213,23 @@ def read_Andor_and_insert_file(_db, _index_shot = None):
 #     configuration_collection.insert_one(configuration_document)
 
 
-# 连接数据库
-client = pymongo.MongoClient(
-    "mongodb://222.29.111.164:27017/?readPreference=primary&appname=MongoDB%20Compass&ssl=false")
-db = client.clapa7
-mydb = db.andor1
-
-Chan_NumImagesCounter_RBV = CaChannel('13ANDOR1:cam1:NumImagesCounter_RBV')
-Chan_NumImagesCounter_RBV.searchw()
-
-
 while True:
+    try:  # 如果连接数据库或者
+        # 连接数据库
+        client = pymongo.MongoClient(
+            "mongodb://222.29.111.164:27017/?readPreference=primary&appname=MongoDB%20Compass&ssl=false")
+        db = client.clapa7
+        mydb = db.andor1
+    except:
+        print("Cannot connect to MongoDB database. Please check MongoDB service!")
+
+    try:
+        Chan_NumImagesCounter_RBV = CaChannel('13ANDOR1:cam1:NumImagesCounter_RBV')
+        Chan_NumImagesCounter_RBV.searchw()
+    except:
+        print("Cannot link to the PV '13ANDOR1:cam1:NumImagesCounter_RBV'. Please check IOC service!")
+        continue
+
     is_OK = Chan_NumImagesCounter_RBV.getw()
     while is_OK == 0:
         is_OK = Chan_NumImagesCounter_RBV.getw()
