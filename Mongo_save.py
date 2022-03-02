@@ -136,7 +136,7 @@ def insert_one_event_collection(_db, _title="unnamed", _Triger=None, _list_PV_na
 
 
 # 方法2：读取Andor相机拍到的图片
-def read_Andor_and_insert_file(_db, _index_shot = None):
+def read_Andor_and_insert_file(_db, _index_shot=None):
     json_Data_list = None
 
     is_OK = Chan_NumImagesCounter_RBV.getw()
@@ -224,7 +224,8 @@ while True:
         print("Cannot connect to MongoDB database. Please check MongoDB service!")
 
     try:
-        Chan_NumImagesCounter_RBV = CaChannel('13ANDOR1:cam1:NumImagesCounter_RBV')
+        Chan_NumImagesCounter_RBV = CaChannel(
+            '13ANDOR1:cam1:NumImagesCounter_RBV')
         Chan_NumImagesCounter_RBV.searchw()
     except:
         print("Cannot link to the PV '13ANDOR1:cam1:NumImagesCounter_RBV'. Please check IOC service!")
@@ -239,9 +240,9 @@ while True:
         if is_OK == 1:
             Chan_ArrayCounter = CaChannel('13ANDOR1:cam1:ArrayCounter_RBV')
             Chan_ArrayCounter.searchw()
-            index_shot = Chan_ArrayCounter.getw() # i 代表发次
+            index_shot = Chan_ArrayCounter.getw()  # i 代表发次
 
             json_Data_list = read_Andor_and_insert_file(mydb, index_shot)
 
             insert_one_event_collection(
-                mydb, _title = "No." + str(index_shot), _Triger=None, _list_PV_name = list_PV_name, _json_Data_list = json_Data_list)
+                mydb, _title="No." + str(index_shot), _Triger=None, _list_PV_name=list_PV_name, _json_Data_list=json_Data_list)
