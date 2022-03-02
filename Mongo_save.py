@@ -18,7 +18,7 @@ import datetime
 from CaChannel import CaChannel, CaChannelException
 
 
-list_PV_name = ['IT:PSB1:GetCurren',
+list_PV_name = ['IT:PSB1:GetCurrent',
                 'IT:PSB1:GetVoltag',
                 'IT:PSB1:PowerOf',
                 'IT:PSB1:PowerO',
@@ -218,8 +218,9 @@ def read_Andor_and_insert_file(_db, _index_shot=None):
 while True:
     try:  # 如果连接数据库或者
         # 连接数据库
-        client = pymongo.MongoClient(
-            "mongodb://222.29.111.164:27017/?readPreference=primary&appname=MongoDB%20Compass&ssl=false")
+        # client = pymongo.MongoClient(
+        #     "mongodb://222.29.111.164:27017/?readPreference=primary&appname=MongoDB%20Compass&ssl=false")
+        client = pymongo.MongoClient()
         db = client.clapa7
         mydb = db.andor1
     except:
