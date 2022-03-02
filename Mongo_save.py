@@ -109,7 +109,8 @@ def insert_one_event_collection(_db, _title="unnamed", _Triger=None, _list_PV_na
     for PV_name in _list_PV_name:
         PV_VAL = None
         PV_DESC = None
-
+        
+        # 可能获取的PV没有正常打开
         try:
             temp_VAL_channel = CaChannel(PV_name + ".VAL")
             temp_VAL_channel.searchw()
@@ -118,10 +119,11 @@ def insert_one_event_collection(_db, _title="unnamed", _Triger=None, _list_PV_na
             temp_DESC_channel = CaChannel(PV_name + ".DESC")
             temp_DESC_channel.searchw()
             PV_DESC = temp_DESC_channel.getw()
+            
+            json_PV_list[PV_name] = {"VAL": PV_VAL, "DESC": PV_DESC}
         except CaChannelException as e:
             print(e)
 
-        json_PV_list[PV_name] = {"VAL": PV_VAL, "DESC": PV_DESC}
 
     event_document = {
         "Title": _title,
