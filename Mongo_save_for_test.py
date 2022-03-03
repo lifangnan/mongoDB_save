@@ -59,9 +59,9 @@ def insert_one_event_collection(_db, _title="unnamed", _Triger=None, _list_PV_na
 def read_Andor_and_insert_file(_db, _index_shot=None):
     json_Data_list = None
 
-    # is_OK = Chan_NumImagesCounter_RBV.getw()
-    # print(is_OK)
-    # time.sleep(0.1)
+    is_OK = Chan_NumImagesCounter_RBV.getw()
+    time.sleep(0.1)
+    print(is_OK)
     Chan_ArrayCounter = CaChannel('13ANDOR1:cam1:ArrayCounter_RBV')
     Chan_ArrayCounter.searchw()
     _index_shot = Chan_ArrayCounter.getw()
@@ -94,9 +94,10 @@ def read_Andor_and_insert_file(_db, _index_shot=None):
     try:  # 如果相机未正常工作
         Chan_image1_ArrayData = CaChannel('13ANDOR1:image1:ArrayData')
         Chan_image1_ArrayData.searchw()
-        pic_arraydata = Chan_image1_ArrayData.getw(use_numpy=True)
+        # pic_arraydata = Chan_image1_ArrayData.getw(use_numpy=True)
+        pic_arraydata = loadmat('I:/github_workspace/HandwrittenDigits')['X'][:,1] * 256
         # 保存图片
-        pic_arraydata = np.array(pic_arraydata, dtype=np.uint8)
+        # pic_arraydata = np.array(pic_arraydata, dtype=np.uint8)
         pic_arraydata = pic_arraydata.reshape(
             Andorvisionpixelx, Andorvisionpixely)
         image_Andor = Image.fromarray(pic_arraydata)  # 可传输灰度图和彩色图
